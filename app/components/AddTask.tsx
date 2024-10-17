@@ -13,14 +13,46 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+//Hooks
 import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+import { useForm } from "react-hook-form";
+//components
 import { Category } from "../types/Category";
 import { Priority } from "../types/Priority";
-import { AddTaskAction } from "../actions/tasks";
-import { useFormState } from "react-dom";
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs from "dayjs";
 
+type FormValues = {
+  title: string;
+  body: string;
+  due_date: string;
+  priority: string;
+  category: string;
+};
+const schema = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1),
+  due_date: z.string(),
+  priority: z.string(),
+  category: z.string(),
+});
 
+const submitHandler = (data: FormValues) => {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+    .then((res) => {
+      if (!res.ok) {
+        return;
+      }
+      document.location.href = "/";
+    })
+    .catch((err) => {});
+};
 const AddTask = ({
   categories,
   priorities,
@@ -29,9 +61,21 @@ const AddTask = ({
   priorities: Priority[];
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
-  const initialState = {};
-  const [state, formAction] = useFormState(AddTaskAction, initialState);
-  useEffect(() => {}, [state]);
+  const {
+    getValues,
+    setValue,
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { due_date: dayjs().toISOString() },
+  });
+
+  useEffect(() => {
+    console.log(errors);
+  }, [errors]);
+
   return (
     <div>
       <Fab
@@ -51,7 +95,7 @@ const AddTask = ({
       >
         <Box
           component={"form"}
-          action={formAction}
+          onSubmit={handleSubmit(submitHandler)}
           sx={{
             backgroundColor: "background.paper",
             p: 3,
@@ -69,27 +113,27 @@ const AddTask = ({
             Add Task
           </Typography>
           <TextField
-            name="name"
-            label="Name"
+            label="Title"
             variant="outlined"
+            {...register("title")}
             fullWidth
-            helperText={(state as any)?.errors?.fieldErrors?.name}
-            error={!!(state as any)?.errors?.fieldErrors?.name}
+            helperText={errors?.["title"]?.message as string}
+            error={errors?.["title"]?.message as boolean | undefined}
           />
           <TextField
-            name="description"
-            label="Description"
+            label="Body"
             variant="outlined"
+            {...register("body")}
             fullWidth
-            helperText={(state as any)?.errors?.fieldErrors?.description||""}
-            error={!!(state as any)?.errors?.fieldErrors?.description}
+            helperText={errors?.["body"]?.message as string}
+            error={errors?.["body"]?.message as boolean | undefined}
           />
           <FormControl fullWidth>
             <InputLabel>Category</InputLabel>
             <Select
-              name="category"
-              defaultValue={categories[0].id}
               label="Category"
+              defaultValue={categories[0].id}
+              {...register("category")}
             >
               {categories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>
@@ -101,9 +145,9 @@ const AddTask = ({
           <FormControl fullWidth>
             <InputLabel>Priority</InputLabel>
             <Select
-              name="priority"
-              defaultValue={priorities[0].id}
               label="Priority"
+              defaultValue={priorities[0].id}
+              {...register("priority")}
             >
               {priorities.map((priority) => (
                 <MenuItem key={priority.id} value={priority.id}>
@@ -112,11 +156,24 @@ const AddTask = ({
               ))}
             </Select>
           </FormControl>
-          {/* TODO: Convert to Iso string and disable paste and default value to now  */}
-          <DateTimePicker name="dueDate" label="Due Date Time" />
+          {/* TODO: Convert to Iso string and disable paste and default value to now */}
+          <DateTimePicker
+            value={dayjs(getValues("due_date"))}
+            onChange={(e) => {
+              setValue("due_date", e?.toISOString() as string, {
+                shouldDirty: true,
+              });
+            }}
+            label="Due DateTime"
+            disablePast
+            slots={{
+              textField: (props) => <TextField {...props} error={false} />,
+            }}
+          />
           <Button variant="contained" type="submit">
             Submit
           </Button>
+          {/* <div style={{ color: "red" }}>{}</div> */}
         </Box>
       </Modal>
     </div>

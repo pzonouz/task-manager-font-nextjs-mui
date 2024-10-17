@@ -1,8 +1,11 @@
 export async function GET() {
   try {
-    const resPriorities = await fetch(`${process.env.BACKEND_URL}/priorities`, {
-      cache: "no-cache",
-    });
+    const resPriorities = await fetch(
+      `${process.env.BACKEND_URL}/priorities/`,
+      {
+        cache: "no-cache",
+      },
+    );
     if (!resPriorities.ok) {
       throw new Error();
     }
